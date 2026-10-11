@@ -1,0 +1,1739 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Production Control</title>
+<style>
+:root{
+    --bg: #0b1220;
+    --bg2: #111827;
+    --surface: #1a2332;
+    --surface2: #212c3d;
+    --border: rgba(148,163,184,.14);
+    --border-strong: rgba(148,163,184,.25);
+    --text: #e8eef7;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --primary: #0d9488;
+    --primary-light: #14b8a6;
+    --primary-soft: rgba(13,148,136,.15);
+    --success: #059669;
+    --success-soft: rgba(5,150,105,.15);
+    --warning: #d97706;
+    --warning-soft: rgba(217,119,6,.15);
+    --danger: #dc2626;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    font-size:15px;line-height:1.5;padding-bottom:92px;overflow-x:hidden;min-height:100vh;
+}
+body::before{
+    content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(13,148,136,.08) 0%,transparent 55%),
+               radial-gradient(ellipse 60% 40% at 90% 100%,rgba(2,132,199,.06) 0%,transparent 50%);
+    z-index:0;pointer-events:none;
+}
+.card{
+    position:relative;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:18px;margin:0 12px 14px;box-shadow:var(--shadow);
+    z-index:1;animation:fadeUp .45s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.header{
+    position:sticky;top:0;z-index:100;background:rgba(11,18,32,.92);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    padding:14px 16px 12px;border-bottom:1px solid var(--border);text-align:center;
+}
+.header h1{font-size:1.3rem;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.header .subtitle{font-size:.78rem;color:var(--text-muted);font-weight:600;letter-spacing:.8px;margin-top:3px;text-transform:uppercase}
+.header .flow{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:10px}
+.header .flow span{background:var(--surface2);border:1px solid var(--border);padding:4px 11px;border-radius:20px;font-size:.7rem;font-weight:700;color:var(--text-muted)}
+.header .flow .arrow{color:var(--text-dim);font-size:.85rem;background:none;border:none;padding:0}
+.sync-bar{
+    display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;
+    font-size:.72rem;color:var(--text-dim);
+}
+.sync-dot{
+    width:8px;height:8px;border-radius:50%;background:var(--text-dim);
+    transition:background .3s;
+}
+.sync-dot.online{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.5)}
+.sync-dot.syncing{background:#fbbf24;animation:pulse 1s infinite}
+.sync-dot.offline{background:#f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+button{
+    border:0;border-radius:var(--radius-sm);padding:13px 16px;min-height:46px;color:#fff;
+    font-weight:650;font-size:.9rem;cursor:pointer;display:inline-flex;align-items:center;
+    justify-content:center;gap:7px;transition:transform .2s,opacity .2s,background .2s;
+}
+button:active{transform:scale(.96);opacity:.9}
+button.primary{background:var(--primary)}
+button.success{background:var(--success)}
+button.warning{background:var(--warning)}
+button.danger{background:var(--danger)}
+button.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+button.small{padding:9px 13px;min-height:38px;font-size:.82rem;border-radius:10px}
+.btn-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.btn-row button{flex:1 1 auto;min-width:110px}
+
+input,select{
+    width:100%;padding:13px 14px;background:var(--bg2);color:var(--text);
+    border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;
+    transition:border-color .2s,box-shadow .2s;
+}
+input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+label{display:block;font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:560px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+@media(min-width:480px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:800px){.stats{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:1100px){.stats{grid-template-columns:repeat(7,1fr)}}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 10px;text-align:center}
+.stat .num{font-size:1.45rem;font-weight:800;margin-top:4px;color:var(--primary-light)}
+.stat b{font-size:.7rem;color:var(--text-muted);font-weight:650}
+
+.rawGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media(min-width:700px){.rawGrid{grid-template-columns:repeat(4,1fr)}}
+.rmStat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;text-align:center}
+.rmStat .num{font-size:1.25rem;font-weight:800;margin-top:6px}
+.rmGood{color:#34d399}.rmWarn{color:#fbbf24}.rmBad{color:#f87171}
+
+.processTrack{display:flex;align-items:center;gap:3px;margin:6px 0 7px}
+.processStep{
+    flex:1;text-align:center;padding:5px 3px;border-radius:8px;font-size:.68rem;font-weight:800;
+    background:var(--bg2);color:var(--text-dim);border:1px solid var(--border);transition:all .25s;
+}
+.processStep.done{background:var(--success-soft);color:#6ee7b7;border-color:rgba(5,150,105,.4)}
+.processStep.current{background:var(--warning-soft);color:#fcd34d;border-color:rgba(217,119,6,.45)}
+.processArrow{color:var(--text-dim);font-size:.8rem}
+.processBar{height:6px;background:var(--bg2);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.processFill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:8px;transition:width .45s ease}
+
+.order-cards{display:flex;flex-direction:column;gap:11px;padding:0 12px 24px}
+.order-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:15px;box-shadow:var(--shadow);animation:fadeUp .4s ease both;
+}
+.order-card.reserved{border-color:rgba(13,148,136,.4);background:linear-gradient(160deg,var(--surface),rgba(13,148,136,.06))}
+.order-card .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.order-card .party{font-size:1.05rem;font-weight:750;color:var(--text)}
+.order-card .model-design{font-size:.85rem;color:var(--text-muted);margin-top:2px}
+.order-card .qty-badge{background:var(--primary);color:#fff;font-weight:800;font-size:1rem;padding:7px 12px;border-radius:10px;min-width:46px;text-align:center}
+.order-card .meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;font-size:.76rem;color:var(--text-muted)}
+.order-card .meta span{background:var(--bg2);padding:3px 9px;border-radius:7px;border:1px solid var(--border)}
+.order-card .actions{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;align-items:center}
+.order-card .actions button{flex:1;min-width:80px}
+.reserveBadge{display:inline-block;padding:3px 9px;border-radius:20px;background:var(--primary-soft);color:var(--primary-light);border:1px solid rgba(13,148,136,.35);font-size:.68rem;font-weight:750;margin-top:5px}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;z-index:200}
+.modal.show{display:flex}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:22px 22px 0 0;padding:22px 16px 28px;width:100%;max-width:560px;max-height:92vh;overflow:auto;animation:slideUp .35s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.box h2{font-size:1.2rem;margin-bottom:14px;text-align:center;font-weight:750}
+@media(min-width:560px){.modal{align-items:center;padding:16px}.box{border-radius:20px;max-height:88vh}}
+
+.bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:150;background:rgba(11,18,32,.95);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);
+    display:flex;justify-content:space-around;padding:7px 2px calc(7px + env(safe-area-inset-bottom));
+}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 8px;border-radius:12px;color:var(--text-dim);font-size:.68rem;font-weight:700;background:transparent;border:0;min-width:58px;min-height:auto;box-shadow:none;transition:color .2s,background .2s}
+.nav-item .icon{font-size:1.3rem}
+.nav-item.active{color:var(--primary-light);background:var(--primary-soft)}
+.nav-item:active{transform:scale(.94)}
+
+.section{display:none}
+.section.active{display:block;animation:fadeUp .35s ease}
+
+.muted{color:var(--text-muted);font-size:.84rem}
+.hint{font-size:.8rem;color:var(--text-dim);margin:8px 0;padding:10px 12px;background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.quickFilters{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.filterGrid{display:grid;grid-template-columns:1fr;gap:11px}
+@media(min-width:560px){.filterGrid{grid-template-columns:2fr 1fr 1fr}}
+.rateRow,.designBox{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:9px}
+.designHeader{display:grid;grid-template-columns:1fr;gap:7px}
+@media(min-width:560px){.designHeader{grid-template-columns:1.5fr 1fr 1fr auto}}
+.sectionToggleRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sectionToggleRow h3{margin:0;font-size:1rem}
+.sectionHidden{display:none}
+.day{display:grid;grid-template-columns:36px 1fr auto;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);align-items:center}
+#file{display:none}
+.sortInfo{color:var(--primary-light);font-size:.78rem;margin-top:7px}
+.summaryRawGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+@media(min-width:700px){.summaryRawGrid{grid-template-columns:repeat(3,1fr)}}
+.summaryRawCard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.summaryRawCard .num{font-size:1.2rem;font-weight:800;margin-top:5px}
+.summarySection{border-top:1px solid var(--border);margin-top:18px;padding-top:14px}
+h2,h3{margin-top:0;margin-bottom:11px}
+h2{font-size:1.15rem;font-weight:750}
+h3{font-size:1rem;color:var(--text);font-weight:700}
+.empty-state{text-align:center;padding:36px 16px;color:var(--text-dim)}
+.empty-state .big-icon{font-size:2.6rem;margin-bottom:10px;opacity:.45}
+input[type="checkbox"]{width:20px;height:20px;accent-color:var(--primary)}
+.table{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius-sm);margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:left;font-size:.85rem}
+th{background:var(--surface2);position:sticky;top:0;z-index:2;font-size:.7rem;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted)}
+.page-title{font-size:1.05rem;font-weight:750;margin-bottom:4px}
+.page-desc{font-size:.82rem;color:var(--text-muted);margin-bottom:12px}
+.batch-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin:10px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.batch-bar .info{font-size:.8rem;color:var(--text-muted);flex:1 1 100%}
+@media(min-width:500px){.batch-bar .info{flex:1}}
+</style>
+</head>
+<body>
+
+<header class="header">
+    <h1>Production Control</h1>
+    <div class="subtitle">Cutting → Stitching → Dispatch</div>
+    <div class="flow">
+        <span>Cut</span><span class="arrow">→</span>
+        <span>Stitch</span><span class="arrow">→</span>
+        <span>Dispatch</span>
+    </div>
+    <div class="sync-bar">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">Connecting...</span>
+    </div>
+</header>
+
+<!-- HOME -->
+<section id="sec-home" class="section active">
+    <div class="card">
+        <h2>Dashboard</h2>
+        <div class="stats">
+            <div class="stat"><b>Orders</b><div class="num" id="a">0</div></div>
+            <div class="stat"><b>Total Qty</b><div class="num" id="b">0</div></div>
+            <div class="stat"><b>Cutting</b><div class="num" id="c">0</div></div>
+            <div class="stat"><b>Stitching</b><div class="num" id="d">0</div></div>
+            <div class="stat"><b>Ready</b><div class="num" id="e">0</div></div>
+            <div class="stat"><b>Dispatched</b><div class="num" id="f">0</div></div>
+            <div class="stat"><b>Remaining</b><div class="num" id="g">0</div></div>
+        </div>
+    </div>
+    <div class="card">
+        <h2>Quick Actions</h2>
+        <div class="btn-row">
+            <button class="primary" onclick="manualOpen()">+ Add Order</button>
+            <button class="warning" onclick="dailyOpen()">Today's Work</button>
+        </div>
+        <div class="btn-row">
+            <button class="ghost" onclick="summaryOpen()">Summary</button>
+            <button class="ghost" onclick="backup()">Backup</button>
+        </div>
+        <div class="btn-row">
+            <button class="ghost" onclick="pickRestoreFile()">Restore</button>
+            <button class="ghost" onclick="sample()">Sample Data</button>
+        </div>
+        <input id="file" type="file" accept=".csv,text/csv" onchange="restore(event)">
+        <p class="muted" style="margin-top:12px;text-align:center">Data syncs to cloud · works on all phones</p>
+    </div>
+    <div class="card">
+        <h2>Raw Material</h2>
+        <div class="rawGrid">
+            <div class="rmStat"><b>TOTAL</b><div class="num" id="rawTotalView">0.00 M²</div></div>
+            <div class="rmStat"><b>USED</b><div class="num" id="rawUsedView">0.00 M²</div></div>
+            <div class="rmStat"><b>RESERVED</b><div class="num" id="rawReserveView">0.00 M²</div></div>
+            <div class="rmStat"><b>FREE</b><div class="num rmGood" id="rawFreeView">0.00 M²</div></div>
+        </div>
+        <p id="rmMessage" class="sortInfo" style="margin-top:10px"></p>
+    </div>
+</section>
+
+<!-- ORDERS — Pending only, no Add -->
+<section id="sec-orders" class="section">
+    <div class="card">
+        <div class="page-title">Manage Orders</div>
+        <div class="page-desc">Pending & active orders only. Update progress, reserve material, or edit.</div>
+        <div class="filterGrid">
+            <div>
+                <label>Search</label>
+                <input id="search" oninput="render()" placeholder="Party, Model, Design...">
+            </div>
+            <div>
+                <label>Status</label>
+                <select id="filter" onchange="render()">
+                    <option value="PENDING">Pending (Active)</option>
+                    <option value="CUTTING">Cutting</option>
+                    <option value="STITCHING">Stitching</option>
+                    <option value="READY">Ready</option>
+                    <option value="ALL">All including Completed</option>
+                </select>
+            </div>
+            <div>
+                <label>Sort</label>
+                <select id="sort" onchange="render()">
+                    <option value="DEFAULT">Order Added</option>
+                    <option value="MODEL">Model</option>
+                    <option value="PARTY">Party</option>
+                    <option value="DATE">Due Date</option>
+                    <option value="QTY">Quantity</option>
+                    <option value="STATUS">Status</option>
+                    <option value="RESERVED">Reserved Only</option>
+                </select>
+            </div>
+        </div>
+        <div class="sortInfo" id="sortInfo">Showing pending orders</div>
+        <div class="quickFilters">
+            <button class="ghost small" onclick="showReservedOnly()">Reserved Only</button>
+            <button class="ghost small" onclick="showPendingOnly()">Pending Only</button>
+        </div>
+        <div class="batch-bar">
+            <button class="primary small" onclick="reserveSelectedBatch()">Reserve Selected</button>
+            <button class="ghost small" onclick="clearBatchSelection()">Clear</button>
+            <span class="info" id="batchInfo">Select orders to reserve material</span>
+        </div>
+    </div>
+    <div id="orderCards" class="order-cards"></div>
+    <div class="table" style="display:none">
+        <table>
+            <thead><tr>
+                <th></th><th>Batch</th><th>Party</th><th>Model</th><th>Design</th>
+                <th>Due</th><th>Qty</th><th>Cut</th><th>Stitch</th>
+                <th>Disp</th><th>Material</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="body"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- STOCK -->
+<section id="sec-stock" class="section">
+    <div class="card">
+        <h2>Ready Stock — Finished Cars</h2>
+        <p class="muted">Cars already finished and available</p>
+        <div class="grid">
+            <div><label>Car Model</label><input id="readyModel" placeholder="Baleno"></div>
+            <div><label>Quantity</label><input id="readyQty" type="number" min="0" placeholder="10"></div>
+        </div>
+        <div class="btn-row"><button class="primary" onclick="saveReadyStock()">Add / Update</button></div>
+        <div id="readyList" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+        <div class="sectionToggleRow">
+            <h3>Raw Material by Design</h3>
+            <button class="ghost small" onclick="toggleDesignMaterial()"><span id="designToggleText">Hide</span></button>
+        </div>
+        <div id="designMaterialSection">
+            <p class="muted">Allocate rolls to each design</p>
+            <div class="grid">
+                <div><label>Design</label><input id="rmDesign" placeholder="3D BLACK"></div>
+                <div><label>Rolls</label><input id="rmRolls" type="number" min="0" step="0.01" placeholder="10"></div>
+            </div>
+            <div class="btn-row"><button class="primary" onclick="saveDesignMaterial()">Add / Update</button></div>
+            <div class="rmStat" style="margin-top:12px;text-align:left">
+                <b>One Roll Size</b>
+                <div class="num" id="rollSizeView">45.00 M²</div>
+                <button class="ghost small" onclick="setRollSize()" style="margin-top:8px">Set Roll Size</button>
+            </div>
+            <div id="designMaterialList" style="margin-top:12px"></div>
+        </div>
+    </div>
+    <div class="card">
+        <button class="ghost" onclick="toggleRates()" style="width:100%">
+            <span id="rateToggleText">Show Model-wise M² per Car</span>
+        </button>
+        <div id="rateSection" class="sectionHidden" style="margin-top:12px">
+            <h3>Model-wise Consumption</h3>
+            <p class="muted">M² used by one car</p>
+            <div class="grid">
+                <div><label>Model</label><input id="rateModel" placeholder="Baleno"></div>
+                <div><label>M² / Car</label><input id="rateValue" type="number" min="0" step="0.01" placeholder="5.00"></div>
+            </div>
+            <div class="btn-row"><button class="primary" onclick="saveRate()">Add / Update</button></div>
+            <div id="rateList" style="margin-top:12px"></div>
+        </div>
+    </div>
+    <div class="card">
+        <button class="ghost" onclick="toggleRequirement()" style="width:100%">
+            <span id="requirementToggleText">Show Material Requirement</span>
+        </button>
+        <div id="requirementSection" class="sectionHidden" style="margin-top:12px">
+            <h3>Material Requirement</h3>
+            <div class="table">
+                <table>
+                    <thead><tr>
+                        <th>Model</th><th>Design</th><th>Pending</th><th>Ready</th>
+                        <th>Need</th><th>Rate</th><th>Required</th>
+                        <th>Reserved</th><th>To Reserve</th>
+                    </tr></thead>
+                    <tbody id="materialRequirementBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MORE -->
+<section id="sec-more" class="section">
+    <div class="card">
+        <h2>Actions</h2>
+        <div class="btn-row">
+            <button class="primary" onclick="manualOpen()">+ Add Order</button>
+            <button class="warning" onclick="dailyOpen()">Today's Work</button>
+        </div>
+        <div class="btn-row">
+            <button class="ghost" onclick="summaryOpen()">Full Summary</button>
+            <button class="ghost" onclick="backup()">Backup CSV</button>
+        </div>
+        <div class="btn-row">
+            <button class="ghost" onclick="pickRestoreFile()">Restore CSV</button>
+            <button class="ghost" onclick="sample()">Load Sample</button>
+        </div>
+        <div class="btn-row">
+            <button class="danger" onclick="delAll()">Delete All Orders</button>
+        </div>
+    </div>
+    <div class="card">
+        <h2>How it works</h2>
+        <ol style="padding-left:18px;color:var(--text-muted);font-size:.9rem;line-height:1.75">
+            <li><b>Stock</b> — Set M² per car, allocate design rolls, enter ready stock</li>
+            <li><b>Add Order</b> — Create new orders from Home or More</li>
+            <li><b>Orders</b> — View only pending work, reserve material, update progress</li>
+            <li>Select orders → <b>Reserve Selected</b> to lock material</li>
+            <li>Edit order to mark Cutting / Stitching / Dispatch done</li>
+            <li>Use <b>Today's Work</b> for daily worker sheet</li>
+            <li>Data <b>syncs automatically</b> to all phones via cloud</li>
+        </ol>
+    </div>
+</section>
+
+<nav class="bottom-nav">
+    <button class="nav-item active" data-sec="sec-home" onclick="showSection('sec-home',this)"><span class="icon">⌂</span>Home</button>
+    <button class="nav-item" data-sec="sec-orders" onclick="showSection('sec-orders',this)"><span class="icon">☰</span>Orders</button>
+    <button class="nav-item" data-sec="sec-stock" onclick="showSection('sec-stock',this)"><span class="icon">▣</span>Stock</button>
+    <button class="nav-item" data-sec="sec-more" onclick="showSection('sec-more',this)"><span class="icon">⚙</span>More</button>
+</nav>
+
+<!-- ADD ORDER -->
+<div id="manual" style="display:none" class="card">
+    <h2>Add New Order</h2>
+    <div class="grid">
+        <div><label>Party</label><input id="mp" list="partySuggestions" autocomplete="off"></div>
+        <div><label>Model</label><input id="mm" list="modelSuggestions" autocomplete="off"></div>
+        <div><label>Design</label><input id="md" list="designSuggestions" autocomplete="off"></div>
+        <div><label>Due Date</label><input id="mu" type="date"></div>
+        <div><label>Qty</label><input id="mq" type="number"></div>
+        <div><label>Cutting Done</label><input id="mc" type="number" value="0"></div>
+        <div><label>Stitching Done</label><input id="ms" type="number" value="0"></div>
+        <div><label>Dispatch Done</label><input id="mx" type="number" value="0"></div>
+    </div>
+    <p class="hint">Type part of a name to see suggestions</p>
+    <datalist id="partySuggestions"></datalist>
+    <datalist id="modelSuggestions"></datalist>
+    <datalist id="designSuggestions"></datalist>
+    <div class="btn-row">
+        <button class="primary" onclick="manualSave()">Save Order</button>
+        <button class="ghost" onclick="manualClose()">Cancel</button>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal" id="editModal">
+    <div class="box">
+        <h2>Edit Order</h2>
+        <div class="grid">
+            <div><label>Party</label><input id="ep"></div>
+            <div><label>Model</label><input id="em"></div>
+            <div><label>Design</label><input id="ed"></div>
+            <div><label>Due</label><input id="eu" type="date"></div>
+            <div><label>Qty</label><input id="eq" type="number"></div>
+            <div><label>Cutting Done</label><input id="ec" type="number"></div>
+            <div><label>Stitching Done</label><input id="es" type="number"></div>
+            <div><label>Dispatch Done</label><input id="ex" type="number"></div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+            <button class="primary" onclick="editSave()">Save</button>
+            <button class="ghost" onclick="editClose()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- TODAY MODAL -->
+<div class="modal" id="dayModal">
+    <div class="box">
+        <h2>Today's Worker Sheet</h2>
+        <p class="muted">Tick jobs and enter quantity for today</p>
+        <div id="days"></div>
+        <div class="btn-row" style="margin-top:16px">
+            <button class="primary" onclick="daySave()">Save Today</button>
+            <button class="ghost" onclick="printDay()">Print</button>
+            <button class="ghost" onclick="dayClose()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- SUMMARY MODAL -->
+<div class="modal" id="summaryModal">
+    <div class="box" style="max-width:1000px">
+        <h2>Production Summary</h2>
+        <div id="summaryContent"></div>
+        <div class="btn-row" style="margin-top:16px">
+            <button class="primary" onclick="printSummary()">Print</button>
+            <button class="ghost" onclick="summaryClose()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+/* =========================================================
+   FIREBASE
+========================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDgasnH2Jf05M2M48r8VmODPYXGOxqZVgU",
+    authDomain: "d-ent-379f4.firebaseapp.com",
+    databaseURL: "https://d-ent-379f4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "d-ent-379f4",
+    storageBucket: "d-ent-379f4.firebasestorage.app",
+    messagingSenderId: "258553846735",
+    appId: "1:258553846735:web:7f52a420af12125cf1d0ba",
+    measurementId: "G-5G83L5C7Y9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dataRef = ref(db, 'production');
+
+/* =========================================================
+   DATA
+========================================================= */
+let O = [];
+let NID = 1;
+let EDIT = null;
+let D = [];
+let RM = { rollSize: 45, ready: {}, rates: {}, designs: {} };
+let syncing = false;
+let applyingRemote = false;
+
+const $ = id => document.getElementById(id);
+window.$ = $; // needed for inline onclick handlers in HTML
+function n(x) { return Math.max(0, Math.floor(Number(x) || 0)); }
+function modelKey(v) { return String(v || '').trim().toLowerCase(); }
+function designKey(v) { return String(v || '').trim().toLowerCase(); }
+function escS(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function setSyncStatus(status) {
+    const dot = $('syncDot');
+    const text = $('syncText');
+    if (!dot || !text) return;
+    dot.className = 'sync-dot ' + status;
+    if (status === 'online') text.textContent = 'Cloud synced';
+    else if (status === 'syncing') text.textContent = 'Saving...';
+    else text.textContent = 'Offline / reconnecting';
+}
+
+/* =========================================================
+   SAVE / LOAD — Firebase + local cache
+========================================================= */
+function save() {
+    // Always cache locally first
+    try {
+        localStorage.setItem('prodO', JSON.stringify(O));
+        localStorage.setItem('prodD', JSON.stringify(D));
+        localStorage.setItem('prodN', String(NID));
+        localStorage.setItem('prodRM', JSON.stringify(RM));
+    } catch (e) { console.error(e); }
+
+    if (applyingRemote) return;
+
+    setSyncStatus('syncing');
+    syncing = true;
+    const payload = { O, D, NID, RM, updatedAt: Date.now() };
+    set(dataRef, payload)
+        .then(() => { setSyncStatus('online'); syncing = false; })
+        .catch(err => { console.error(err); setSyncStatus('offline'); syncing = false; });
+}
+
+function applyData(data) {
+    if (!data) return;
+    applyingRemote = true;
+    O = Array.isArray(data.O) ? data.O : [];
+    D = Array.isArray(data.D) ? data.D : [];
+    NID = Number(data.NID) || 1;
+    RM = data.RM && typeof data.RM === 'object'
+        ? data.RM
+        : { rollSize: 45, ready: {}, rates: {}, designs: {} };
+    RM.rollSize = Number(RM.rollSize) || 45;
+    RM.ready = RM.ready && typeof RM.ready === 'object' ? RM.ready : {};
+    RM.rates = RM.rates && typeof RM.rates === 'object' ? RM.rates : {};
+    RM.designs = RM.designs && typeof RM.designs === 'object' ? RM.designs : {};
+    O.forEach(o => {
+        o.q = n(o.q); o.c = n(o.c); o.s = n(o.s); o.x = n(o.x);
+        o.matUsed = Number(o.matUsed) || 0;
+        o.matReserved = Number(o.matReserved) || 0;
+    });
+    // Cache locally
+    try {
+        localStorage.setItem('prodO', JSON.stringify(O));
+        localStorage.setItem('prodD', JSON.stringify(D));
+        localStorage.setItem('prodN', String(NID));
+        localStorage.setItem('prodRM', JSON.stringify(RM));
+    } catch (e) {}
+    applyingRemote = false;
+    render();
+    restoreDesignMaterialVisibility();
+    updateSuggestionLists();
+}
+
+function loadLocal() {
+    try {
+        O = JSON.parse(localStorage.getItem('prodO') || '[]');
+        D = JSON.parse(localStorage.getItem('prodD') || '[]');
+        NID = Number(localStorage.getItem('prodN')) || 1;
+        RM = JSON.parse(localStorage.getItem('prodRM') || '{"rollSize":45,"ready":{},"rates":{},"designs":{}}');
+        RM.rollSize = Number(RM.rollSize) || 45;
+        RM.ready = RM.ready && typeof RM.ready === 'object' ? RM.ready : {};
+        RM.rates = RM.rates && typeof RM.rates === 'object' ? RM.rates : {};
+        RM.designs = RM.designs && typeof RM.designs === 'object' ? RM.designs : {};
+        O.forEach(o => {
+            o.q = n(o.q); o.c = n(o.c); o.s = n(o.s); o.x = n(o.x);
+            o.matUsed = Number(o.matUsed) || 0;
+            o.matReserved = Number(o.matReserved) || 0;
+        });
+    } catch (e) {
+        O = []; D = []; NID = 1;
+        RM = { rollSize: 45, ready: {}, rates: {}, designs: {} };
+    }
+}
+
+// Real-time listener
+onValue(dataRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        setSyncStatus('online');
+        applyData(data);
+    } else {
+        // Empty cloud — push local if we have any
+        setSyncStatus('online');
+        if (O.length || Object.keys(RM.designs).length || Object.keys(RM.rates).length) {
+            save();
+        }
+    }
+}, (err) => {
+    console.error(err);
+    setSyncStatus('offline');
+});
+
+/* =========================================================
+   NAV
+========================================================= */
+function showSection(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    $(id).classList.add('active');
+    if (btn) btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (id === 'sec-orders') {
+        if ($('filter').value === 'ALL') $('filter').value = 'PENDING';
+        render();
+    }
+}
+window.showSection = showSection;
+
+/* =========================================================
+   SUGGESTIONS
+========================================================= */
+function pendingSuggestionValues(field) {
+    let vals = [];
+    if (field === 'model') {
+        Object.keys(RM.rates || {}).forEach(v => {
+            v = String(v || '').trim();
+            if (v && !vals.some(x => x.toLowerCase() === v.toLowerCase())) vals.push(v);
+        });
+        return vals.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+    O.forEach(o => {
+        if (Math.max(0, Number(o.q || 0) - Number(o.x || 0)) <= 0) return;
+        let v = field === 'party' ? o.p : o.d;
+        v = String(v || '').trim();
+        if (v && !vals.some(x => x.toLowerCase() === v.toLowerCase())) vals.push(v);
+    });
+    if (!vals.length) {
+        O.forEach(o => {
+            let v = field === 'party' ? o.p : o.d;
+            v = String(v || '').trim();
+            if (v && !vals.some(x => x.toLowerCase() === v.toLowerCase())) vals.push(v);
+        });
+    }
+    return vals.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+}
+function updateSuggestionLists() {
+    const fill = (id, vals) => {
+        const el = $(id); if (!el) return;
+        el.innerHTML = vals.map(v => `<option value="${escS(v)}"></option>`).join('');
+    };
+    fill('partySuggestions', pendingSuggestionValues('party'));
+    fill('modelSuggestions', pendingSuggestionValues('model'));
+    fill('designSuggestions', pendingSuggestionValues('design'));
+}
+
+/* =========================================================
+   HELPERS
+========================================================= */
+function rateFor(model) {
+    let found = Object.keys(RM.rates).find(k => modelKey(k) === modelKey(model));
+    return found ? Number(RM.rates[found]) || 0 : 0;
+}
+function readyFor(model) {
+    let found = Object.keys(RM.ready).find(k => modelKey(k) === modelKey(model));
+    return found ? n(RM.ready[found]) : 0;
+}
+function setReadyForModel(model, value) {
+    let found = Object.keys(RM.ready).find(k => modelKey(k) === modelKey(model));
+    RM.ready[found || String(model).trim()] = n(value);
+}
+function designInfo(design) {
+    let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(design));
+    if (!found) return { name: String(design || '').trim(), rolls: 0, used: 0, reserved: 0 };
+    let x = RM.designs[found];
+    return { name: found, rolls: Number(x.rolls) || 0, used: Number(x.used) || 0, reserved: Number(x.reserved) || 0 };
+}
+function designFreeM2(design) {
+    let x = designInfo(design);
+    return x.rolls * RM.rollSize - x.used - x.reserved;
+}
+function totalRawM2() { return Object.keys(RM.designs).reduce((s, k) => s + Number(RM.designs[k].rolls || 0) * Number(RM.rollSize || 45), 0); }
+function totalUsed() { return Object.keys(RM.designs).reduce((s, k) => s + Number(RM.designs[k].used || 0), 0); }
+function totalReserved() { return Object.keys(RM.designs).reduce((s, k) => s + Number(RM.designs[k].reserved || 0), 0); }
+function totalFree() { return totalRawM2() - totalUsed() - totalReserved(); }
+
+/* =========================================================
+   READY STOCK / DESIGN / RATES
+========================================================= */
+function saveReadyStock() {
+    let model = ($('readyModel').value || '').trim();
+    let qty = Number($('readyQty').value);
+    if (!model || !isFinite(qty) || qty < 0) return alert('Enter model and quantity.');
+    setReadyForModel(model, qty);
+    $('readyModel').value = ''; $('readyQty').value = '';
+    save(); renderInventory();
+}
+window.saveReadyStock = saveReadyStock;
+
+function editReadyStock(model) {
+    let v = prompt('Ready stock for ' + model + ':', readyFor(model));
+    if (v === null) return;
+    let x = Number(v);
+    if (!isFinite(x) || x < 0) return alert('Enter valid quantity.');
+    setReadyForModel(model, x);
+    save(); renderInventory();
+}
+window.editReadyStock = editReadyStock;
+
+function deleteReadyStock(model) {
+    if (!confirm('Delete ready stock for ' + model + '?')) return;
+    let found = Object.keys(RM.ready).find(k => modelKey(k) === modelKey(model));
+    if (found) delete RM.ready[found];
+    save(); renderInventory();
+}
+window.deleteReadyStock = deleteReadyStock;
+
+function saveDesignMaterial() {
+    let design = ($('rmDesign').value || '').trim();
+    let rolls = Number($('rmRolls').value);
+    if (!design || !isFinite(rolls) || rolls < 0) return alert('Enter Design and Rolls.');
+    let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(design));
+    if (found) {
+        let used = Number(RM.designs[found].used) || 0;
+        let reserved = Number(RM.designs[found].reserved) || 0;
+        if (rolls * RM.rollSize + 0.000001 < used + reserved) {
+            return alert('Cannot reduce below USED + RESERVED.\nUsed: ' + used.toFixed(2) + ' M²\nReserved: ' + reserved.toFixed(2) + ' M²');
+        }
+        RM.designs[found].rolls = rolls;
+    } else {
+        RM.designs[design] = { rolls: rolls, used: 0, reserved: 0 };
+    }
+    $('rmDesign').value = ''; $('rmRolls').value = '';
+    save(); renderInventory();
+}
+window.saveDesignMaterial = saveDesignMaterial;
+
+function deleteDesignMaterial(design) {
+    let info = designInfo(design);
+    if (info.used > 0 || info.reserved > 0) {
+        return alert('Cannot delete. Used: ' + info.used.toFixed(2) + ' · Reserved: ' + info.reserved.toFixed(2));
+    }
+    if (!confirm('Delete allocation for ' + design + '?')) return;
+    let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(design));
+    if (found) delete RM.designs[found];
+    save(); renderInventory();
+}
+window.deleteDesignMaterial = deleteDesignMaterial;
+
+function setRollSize() {
+    let v = prompt('M² in one roll:', RM.rollSize || 45);
+    if (v === null) return;
+    let x = Number(v);
+    if (!isFinite(x) || x <= 0) return alert('Enter valid size.');
+    let usedReserved = totalUsed() + totalReserved();
+    let newTotal = Object.keys(RM.designs).reduce((s, k) => s + Number(RM.designs[k].rolls || 0) * x, 0);
+    if (newTotal + 0.000001 < usedReserved) return alert('New size would make total smaller than used+reserved.');
+    RM.rollSize = x;
+    save(); renderInventory();
+}
+window.setRollSize = setRollSize;
+
+function editDesignMaterial(design) {
+    let info = designInfo(design);
+    let v = prompt('Allocated rolls for ' + design + ':', info.rolls);
+    if (v === null) return;
+    let rolls = Number(v);
+    if (!isFinite(rolls) || rolls < 0) return alert('Enter valid number.');
+    if (rolls * RM.rollSize + 0.000001 < info.used + info.reserved) return alert('Cannot reduce below USED + RESERVED.');
+    let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(design));
+    if (found) RM.designs[found].rolls = rolls;
+    save(); renderInventory();
+}
+window.editDesignMaterial = editDesignMaterial;
+
+function saveRate() {
+    let model = ($('rateModel').value || '').trim();
+    let value = Number($('rateValue').value);
+    if (!model || !isFinite(value) || value < 0) return alert('Enter Model and M² per car.');
+    let found = Object.keys(RM.rates).find(k => modelKey(k) === modelKey(model));
+    RM.rates[found || model] = value;
+    $('rateModel').value = ''; $('rateValue').value = '';
+    save(); renderInventory();
+}
+window.saveRate = saveRate;
+
+function deleteRate(model) {
+    if (!confirm('Delete rate for ' + model + '?')) return;
+    let found = Object.keys(RM.rates).find(k => modelKey(k) === modelKey(model));
+    if (found) delete RM.rates[found];
+    save(); renderInventory();
+}
+window.deleteRate = deleteRate;
+
+function editRate(model) {
+    let v = prompt('M² per car for ' + model + ':', rateFor(model));
+    if (v === null) return;
+    let value = Number(v);
+    if (!isFinite(value) || value < 0) return alert('Enter valid rate.');
+    let found = Object.keys(RM.rates).find(k => modelKey(k) === modelKey(model));
+    if (found) RM.rates[found] = value;
+    save(); renderInventory();
+}
+window.editRate = editRate;
+
+/* =========================================================
+   REQUIREMENT + INVENTORY
+========================================================= */
+function pendingQtyForModelDesign(model, design) {
+    return O.filter(o => modelKey(o.m) === modelKey(model) && designKey(o.d) === designKey(design))
+        .reduce((s, o) => s + Math.max(0, Number(o.q || 0) - Number(o.x || 0)), 0);
+}
+function renderRequirement() {
+    let combinations = {};
+    O.forEach(o => {
+        let key = modelKey(o.m) + '|||' + designKey(o.d);
+        if (!combinations[key]) combinations[key] = { model: o.m, design: o.d };
+    });
+    let rows = Object.values(combinations);
+    $('materialRequirementBody').innerHTML = rows.length ? rows.map(x => {
+        let pending = pendingQtyForModelDesign(x.model, x.design);
+        let ready = readyFor(x.model);
+        let production = Math.max(0, pending - ready);
+        let rate = rateFor(x.model);
+        let required = production * rate;
+        let reserved = O.filter(o => modelKey(o.m) === modelKey(x.model) && designKey(o.d) === designKey(x.design))
+            .reduce((s, o) => s + Number(o.matReserved || 0), 0);
+        let toReserve = Math.max(0, required - reserved);
+        return `<tr>
+            <td><b>${escS(x.model)}</b></td><td><b>${escS(x.design)}</b></td>
+            <td>${pending}</td><td>${ready}</td><td>${production}</td>
+            <td>${rate.toFixed(2)}</td><td>${required.toFixed(2)}</td>
+            <td>${reserved.toFixed(2)}</td><td>${toReserve.toFixed(2)}</td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="9" style="text-align:center">No pending orders</td></tr>`;
+}
+
+function renderInventory() {
+    let total = totalRawM2(), used = totalUsed(), reserved = totalReserved(), free = totalFree();
+    $('rollSizeView').textContent = Number(RM.rollSize || 45).toFixed(2) + ' M²';
+    $('rawTotalView').textContent = total.toFixed(2) + ' M²';
+    $('rawUsedView').textContent = used.toFixed(2) + ' M²';
+    $('rawReserveView').textContent = reserved.toFixed(2) + ' M²';
+    $('rawFreeView').textContent = free.toFixed(2) + ' M²';
+    $('rawFreeView').className = 'num ' + (free < 0 ? 'rmBad' : free < 10 ? 'rmWarn' : 'rmGood');
+
+    let readyKeys = Object.keys(RM.ready).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    $('readyList').innerHTML = readyKeys.length ? readyKeys.map(k => `
+        <div class="rateRow">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <b>${escS(k)}</b><span>${n(RM.ready[k])} cars</span>
+                <div>
+                    <button class="ghost small" data-key="${escS(k)}" onclick="editReadyStock(this.dataset.key)">Edit</button>
+                    <button class="danger small" data-key="${escS(k)}" onclick="deleteReadyStock(this.dataset.key)">Delete</button>
+                </div>
+            </div>
+        </div>`).join('') : `<span class="muted">No ready stock yet.</span>`;
+
+    let designKeys = Object.keys(RM.designs).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    $('designMaterialList').innerHTML = designKeys.length ? designKeys.map(k => {
+        let x = RM.designs[k];
+        let totalM2 = Number(x.rolls || 0) * Number(RM.rollSize || 45);
+        let used = Number(x.used || 0), reserved = Number(x.reserved || 0);
+        let free = totalM2 - used - reserved;
+        let cls = free < 0 ? 'rmBad' : free < 10 ? 'rmWarn' : 'rmGood';
+        return `<div class="designBox">
+            <div class="designHeader">
+                <div><b>${escS(k)}</b></div>
+                <div>${Number(x.rolls || 0).toFixed(2)} rolls</div>
+                <div>${totalM2.toFixed(2)} M²</div>
+                <div>
+                    <button class="ghost small" data-key="${escS(k)}" onclick="editDesignMaterial(this.dataset.key)">Edit</button>
+                    <button class="danger small" data-key="${escS(k)}" onclick="deleteDesignMaterial(this.dataset.key)">Delete</button>
+                </div>
+            </div>
+            <div class="rawGrid" style="margin-top:8px">
+                <div><span class="muted">Used</span><br><b>${used.toFixed(2)}</b></div>
+                <div><span class="muted">Reserved</span><br><b>${reserved.toFixed(2)}</b></div>
+                <div><span class="muted">Free</span><br><b class="${cls}">${free.toFixed(2)}</b></div>
+                <div><span class="muted">Roll</span><br><b>${Number(RM.rollSize || 45).toFixed(2)}</b></div>
+            </div>
+        </div>`;
+    }).join('') : `<span class="muted">No design material allocated.</span>`;
+
+    let rateKeys = Object.keys(RM.rates).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    $('rateList').innerHTML = rateKeys.length ? rateKeys.map(k => `
+        <div class="rateRow">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <b>${escS(k)}</b><span>${Number(RM.rates[k]).toFixed(2)} M² / car</span>
+                <div>
+                    <button class="ghost small" data-key="${escS(k)}" onclick="editRate(this.dataset.key)">Edit</button>
+                    <button class="danger small" data-key="${escS(k)}" onclick="deleteRate(this.dataset.key)">Delete</button>
+                </div>
+            </div>
+        </div>`).join('') : `<span class="muted">No rates yet.</span>`;
+
+    renderRequirement();
+    $('rmMessage').textContent = free < 0
+        ? '⚠ Stock is below used + reserved material.'
+        : 'Material is tracked per design. Cutting only deducts from that design.';
+}
+
+/* =========================================================
+   TOGGLES
+========================================================= */
+function toggleDesignMaterial() {
+    let box = $('designMaterialSection'), text = $('designToggleText');
+    if (box.classList.contains('sectionHidden')) {
+        box.classList.remove('sectionHidden'); text.textContent = 'Hide';
+        localStorage.setItem('prodDesignVisible', '1');
+    } else {
+        box.classList.add('sectionHidden'); text.textContent = 'Show';
+        localStorage.setItem('prodDesignVisible', '0');
+    }
+}
+window.toggleDesignMaterial = toggleDesignMaterial;
+
+function restoreDesignMaterialVisibility() {
+    if (localStorage.getItem('prodDesignVisible') === '0') {
+        $('designMaterialSection').classList.add('sectionHidden');
+        $('designToggleText').textContent = 'Show';
+    }
+}
+function toggleRates() {
+    let box = $('rateSection'), text = $('rateToggleText');
+    if (box.classList.contains('sectionHidden')) {
+        box.classList.remove('sectionHidden'); text.textContent = 'Hide Model-wise M² per Car';
+    } else {
+        box.classList.add('sectionHidden'); text.textContent = 'Show Model-wise M² per Car';
+    }
+}
+window.toggleRates = toggleRates;
+
+function toggleRequirement() {
+    let box = $('requirementSection'), text = $('requirementToggleText');
+    if (box.classList.contains('sectionHidden')) {
+        box.classList.remove('sectionHidden'); text.textContent = 'Hide Material Requirement';
+    } else {
+        box.classList.add('sectionHidden'); text.textContent = 'Show Material Requirement';
+    }
+}
+window.toggleRequirement = toggleRequirement;
+
+/* =========================================================
+   STATUS & SORT
+========================================================= */
+function st(o) {
+    if (o.x >= o.q) return 'COMPLETED';
+    if (o.s >= o.q) return 'READY';
+    if (o.c >= o.q) return 'STITCHING';
+    return 'CUTTING';
+}
+function isPending(o) { return Number(o.x || 0) < Number(o.q || 0); }
+
+function sortOrders(list) {
+    let sort = $('sort').value;
+    if (sort === 'DEFAULT') { $('sortInfo').textContent = 'Showing in original order'; return list; }
+    if (sort === 'MODEL') {
+        $('sortInfo').textContent = 'Sorted by Model';
+        return list.sort((a, b) => {
+            let r = String(a.m || '').localeCompare(String(b.m || ''), undefined, { numeric: true, sensitivity: 'base' });
+            return r !== 0 ? r : a.id - b.id;
+        });
+    }
+    if (sort === 'PARTY') {
+        $('sortInfo').textContent = 'Sorted by Party';
+        return list.sort((a, b) => {
+            let r = String(a.p || '').localeCompare(String(b.p || ''), undefined, { numeric: true, sensitivity: 'base' });
+            return r !== 0 ? r : a.id - b.id;
+        });
+    }
+    if (sort === 'DATE') {
+        $('sortInfo').textContent = 'Sorted by Due Date';
+        return list.sort((a, b) => String(a.u || '').localeCompare(String(b.u || '')));
+    }
+    if (sort === 'QTY') {
+        $('sortInfo').textContent = 'Sorted by Quantity';
+        return list.sort((a, b) => Number(b.q || 0) - Number(a.q || 0));
+    }
+    if (sort === 'STATUS') {
+        let order = { CUTTING: 1, STITCHING: 2, READY: 3, COMPLETED: 4 };
+        $('sortInfo').textContent = 'Sorted by Status';
+        return list.sort((a, b) => order[st(a)] - order[st(b)]);
+    }
+    if (sort === 'RESERVED') {
+        $('sortInfo').textContent = 'Reserved material only';
+        return list.filter(o => Number(o.matReserved || 0) > 0);
+    }
+    return list;
+}
+function showReservedOnly() { $('sort').value = 'RESERVED'; $('filter').value = 'PENDING'; render(); }
+function showPendingOnly() { $('sort').value = 'DEFAULT'; $('filter').value = 'PENDING'; $('search').value = ''; render(); }
+window.showReservedOnly = showReservedOnly;
+window.showPendingOnly = showPendingOnly;
+
+/* =========================================================
+   RENDER
+========================================================= */
+function render() {
+    let q = ($('search').value || '').toLowerCase().trim();
+    let f = $('filter').value;
+    let L = O.filter(o => {
+        let text = (o.p + ' ' + o.m + ' ' + o.d).toLowerCase();
+        if (q && !text.includes(q)) return false;
+        if (f === 'PENDING') return isPending(o);
+        if (f === 'ALL') return true;
+        return st(o) === f;
+    });
+    L = sortOrders(L);
+
+    let cardsEl = $('orderCards');
+    if (!L.length) {
+        cardsEl.innerHTML = `<div class="empty-state"><div class="big-icon">—</div>No matching orders</div>`;
+    } else {
+        cardsEl.innerHTML = L.map((o, idx) => {
+            let progress = Math.min(100, Math.round((Number(o.x || 0) / Math.max(1, Number(o.q || 0))) * 100));
+            let isReserved = Number(o.matReserved || 0) > 0;
+            return `
+            <div class="order-card ${isReserved ? 'reserved' : ''}" style="animation-delay:${idx * 0.03}s">
+                <div class="top-row">
+                    <div>
+                        <div class="party">${escS(o.p)}</div>
+                        <div class="model-design">${escS(o.m)} · ${escS(o.d)}</div>
+                    </div>
+                    <div class="qty-badge">${o.q}</div>
+                </div>
+                <div class="meta">
+                    <span>${escS(o.u) || 'No date'}</span>
+                    <span>Cut ${o.c}/${o.q}</span>
+                    <span>Stitch ${o.s}/${o.q}</span>
+                    <span>Disp ${o.x}/${o.q}</span>
+                </div>
+                <div>
+                    <div class="processTrack">
+                        <div class="processStep ${o.c >= o.q ? 'done' : o.c > 0 ? 'current' : ''}">CUT</div>
+                        <span class="processArrow">›</span>
+                        <div class="processStep ${o.s >= o.q ? 'done' : o.s > 0 ? 'current' : ''}">STITCH</div>
+                        <span class="processArrow">›</span>
+                        <div class="processStep ${o.x >= o.q ? 'done' : o.x > 0 ? 'current' : ''}">DISPATCH</div>
+                    </div>
+                    <div class="processBar"><div class="processFill" style="width:${progress}%"></div></div>
+                    <b style="font-size:.85rem;margin-top:5px;display:inline-block">${st(o)}</b>
+                    ${isReserved ? `<div class="reserveBadge">Reserved ${Number(o.matReserved || 0).toFixed(2)} M²</div>` : ''}
+                </div>
+                <div style="margin-top:7px;font-size:.78rem;color:var(--text-dim)">
+                    ${rateFor(o.m) ? Number(o.matUsed || 0).toFixed(2) + ' M² used' : 'Rate missing'}
+                </div>
+                <div class="actions">
+                    <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;color:var(--text-muted)">
+                        <input type="checkbox" class="batchCheck" data-id="${o.id}" onchange="updateBatchInfo()"> Select
+                    </label>
+                    <button class="ghost small" data-id="${o.id}" onclick="edit(Number(this.dataset.id))">Edit</button>
+                    <button class="danger small" data-id="${o.id}" onclick="del(Number(this.dataset.id))">Delete</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    $('body').innerHTML = '';
+    L.forEach(o => {
+        let r = document.createElement('tr');
+        r.dataset.id = o.id;
+        r.innerHTML = `
+            <td></td>
+            <td><input type="checkbox" class="batchCheck" data-id="${o.id}" onchange="updateBatchInfo()"></td>
+            <td>${escS(o.p)}</td><td>${escS(o.m)}</td><td>${escS(o.d)}</td>
+            <td>${escS(o.u)}</td><td>${o.q}</td>
+            <td>${o.c}</td><td>${o.s}</td><td>${o.x}</td>
+            <td>${Number(o.matUsed || 0).toFixed(2)}</td>
+            <td>${st(o)}</td>
+            <td><button class="ghost small" data-id="${o.id}" onclick="edit(Number(this.dataset.id))">Edit</button></td>`;
+        $('body').appendChild(r);
+    });
+
+    let qy = 0, c = 0, s = 0, x = 0, rd = 0, rm = 0;
+    O.forEach(o => {
+        qy += o.q; c += o.c; s += o.s; x += o.x;
+        rd += Math.max(0, o.s - o.x);
+        rm += Math.max(0, o.q - o.x);
+    });
+    $('a').textContent = O.length;
+    $('b').textContent = qy;
+    $('c').textContent = c;
+    $('d').textContent = s;
+    $('e').textContent = rd;
+    $('f').textContent = x;
+    $('g').textContent = rm;
+
+    renderInventory();
+    updateSuggestionLists();
+    updateBatchInfo();
+}
+
+/* =========================================================
+   ADD / EDIT / DELETE ORDER
+========================================================= */
+function manualOpen() {
+    updateSuggestionLists();
+    $('manual').style.display = 'block';
+    showSection('sec-home', document.querySelector('[data-sec="sec-home"]'));
+    $('manual').scrollIntoView({ behavior: 'smooth' });
+}
+window.manualOpen = manualOpen;
+
+function manualClose() { $('manual').style.display = 'none'; }
+window.manualClose = manualClose;
+
+function manualSave() {
+    let q = n($('mq').value);
+    if (!$('mp').value || !$('mm').value || !$('md').value || !$('mu').value || q < 1) {
+        return alert('Fill Party, Model, Design, Due Date and Qty.');
+    }
+    let model = $('mm').value.trim();
+    let design = $('md').value.trim();
+    if (!rateFor(model)) return alert('First add M²/car rate for ' + model + ' in Stock.');
+    if (!Object.keys(RM.designs).some(k => designKey(k) === designKey(design))) {
+        return alert('First allocate raw material for design "' + design + '" in Stock.');
+    }
+    O.push({
+        id: NID++, p: $('mp').value.trim(), m: model, d: design, u: $('mu').value,
+        q: q, c: 0, s: 0, x: 0, matUsed: 0, matReserved: 0
+    });
+    $('mp').value = ''; $('mm').value = ''; $('md').value = '';
+    $('mu').value = ''; $('mq').value = '';
+    $('mc').value = '0'; $('ms').value = '0'; $('mx').value = '0';
+    manualClose();
+    save();
+    render();
+    alert('Order added.');
+}
+window.manualSave = manualSave;
+
+function selectedOrders() {
+    return [...document.querySelectorAll('.batchCheck:checked')]
+        .map(x => O.find(o => o.id == Number(x.dataset.id)))
+        .filter(Boolean);
+}
+function clearBatchSelection() {
+    document.querySelectorAll('.batchCheck').forEach(x => x.checked = false);
+    updateBatchInfo();
+}
+window.clearBatchSelection = clearBatchSelection;
+
+function updateBatchInfo() {
+    let L = selectedOrders();
+    let need = 0;
+    L.forEach(o => { need += Math.max(0, Number(o.q || 0) - Number(o.c || 0)) * rateFor(o.m); });
+    $('batchInfo').textContent = L.length
+        ? L.length + ' selected · ~' + need.toFixed(2) + ' M²'
+        : 'Select orders to reserve material';
+}
+window.updateBatchInfo = updateBatchInfo;
+
+function reserveSelectedBatch() {
+    let L = selectedOrders();
+    if (!L.length) return alert('Select at least one order.');
+    L.forEach(o => {
+        let old = Number(o.matReserved || 0);
+        if (old > 0) {
+            let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(o.d));
+            if (found) RM.designs[found].reserved = Math.max(0, Number(RM.designs[found].reserved || 0) - old);
+            o.matReserved = 0;
+        }
+    });
+    let designNeed = {};
+    L.forEach(o => {
+        let remaining = Math.max(0, Number(o.q || 0) - Number(o.c || 0));
+        let rate = rateFor(o.m);
+        if (remaining > 0 && rate > 0) {
+            let key = designKey(o.d);
+            if (!designNeed[key]) designNeed[key] = { design: o.d, amount: 0 };
+            designNeed[key].amount += remaining * rate;
+        }
+    });
+    for (let key in designNeed) {
+        let item = designNeed[key];
+        let info = designInfo(item.design);
+        let free = info.rolls * RM.rollSize - info.used - info.reserved;
+        if (item.amount > free + 0.000001) {
+            return alert('Not enough material\n\n' + item.design + '\nNeed: ' + item.amount.toFixed(2) + ' M²\nFree: ' + free.toFixed(2) + ' M²');
+        }
+    }
+    for (let key in designNeed) {
+        let item = designNeed[key];
+        let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(item.design));
+        if (found) RM.designs[found].reserved = Number(RM.designs[found].reserved || 0) + item.amount;
+    }
+    L.forEach(o => {
+        o.matReserved = Math.max(0, Number(o.q || 0) - Number(o.c || 0)) * rateFor(o.m);
+    });
+    save(); render();
+    let msg = Object.values(designNeed).map(x => x.design + ': ' + x.amount.toFixed(2) + ' M²').join('\n');
+    alert('Material reserved:\n\n' + msg);
+}
+window.reserveSelectedBatch = reserveSelectedBatch;
+
+function edit(id) {
+    let o = O.find(x => x.id == id);
+    if (!o) return;
+    EDIT = id;
+    $('ep').value = o.p; $('em').value = o.m; $('ed').value = o.d;
+    $('eu').value = o.u; $('eq').value = o.q;
+    $('ec').value = o.c; $('es').value = o.s; $('ex').value = o.x;
+    $('editModal').classList.add('show');
+    $('editModal').style.display = 'flex';
+}
+window.edit = edit;
+
+function editClose() {
+    $('editModal').classList.remove('show');
+    $('editModal').style.display = 'none';
+    EDIT = null;
+}
+window.editClose = editClose;
+
+function editSave() {
+    let o = O.find(x => x.id == EDIT);
+    let q = n($('eq').value);
+    if (!o || q < 1) return alert('Invalid quantity.');
+    let oldDesign = o.d, oldUsed = Number(o.matUsed || 0), oldReserved = Number(o.matReserved || 0);
+    let newModel = $('em').value.trim(), newDesign = $('ed').value.trim();
+    let newCut = Math.min(n($('ec').value), q);
+    if (!newModel || !newDesign) return alert('Model and Design required.');
+    let rate = rateFor(newModel);
+    if (newCut > 0 && !rate) return alert('Add M²/car rate for ' + newModel + ' first.');
+    if (oldUsed > 0) {
+        let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(oldDesign));
+        if (found) RM.designs[found].used = Math.max(0, Number(RM.designs[found].used || 0) - oldUsed);
+    }
+    if (oldReserved > 0) {
+        let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(oldDesign));
+        if (found) RM.designs[found].reserved = Math.max(0, Number(RM.designs[found].reserved || 0) - oldReserved);
+    }
+    let newUsed = newCut * rate;
+    if (newUsed > 0) {
+        let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(newDesign));
+        if (!found) return alert('No material allocation for "' + newDesign + '".');
+        let free = designFreeM2(newDesign);
+        if (newUsed > free + 0.000001) {
+            return alert('Not enough material\nNeed: ' + newUsed.toFixed(2) + ' · Free: ' + free.toFixed(2));
+        }
+        RM.designs[found].used = Number(RM.designs[found].used || 0) + newUsed;
+    }
+    o.p = $('ep').value.trim();
+    o.m = newModel; o.d = newDesign; o.u = $('eu').value;
+    o.q = q; o.c = newCut;
+    o.s = Math.min(n($('es').value), q);
+    o.x = Math.min(n($('ex').value), q);
+    o.matUsed = newUsed;
+    o.matReserved = 0;
+    editClose();
+    save(); render();
+    alert('Updated.');
+}
+window.editSave = editSave;
+
+function del(id) {
+    let i = O.findIndex(x => x.id == id);
+    if (i < 0) return;
+    if (prompt('Type DELETE to confirm', '') !== 'DELETE') return;
+    let o = O[i];
+    let found = Object.keys(RM.designs).find(k => designKey(k) === designKey(o.d));
+    if (found) {
+        RM.designs[found].used = Math.max(0, Number(RM.designs[found].used || 0) - Number(o.matUsed || 0));
+        RM.designs[found].reserved = Math.max(0, Number(RM.designs[found].reserved || 0) - Number(o.matReserved || 0));
+    }
+    O.splice(i, 1);
+    D = D.filter(x => x.id != id);
+    save(); render();
+    alert('Deleted.');
+}
+window.del = del;
+
+function delAll() {
+    if (!O.length) return alert('No orders.');
+    if (prompt('Type DELETE ALL to confirm', '') !== 'DELETE ALL') return;
+    Object.keys(RM.designs).forEach(k => { RM.designs[k].used = 0; RM.designs[k].reserved = 0; });
+    O = []; D = []; NID = 1;
+    save(); render();
+    alert('All deleted.');
+}
+window.delAll = delAll;
+
+/* =========================================================
+   SAMPLE / CSV
+========================================================= */
+function sample() {
+    let t = new Date().toISOString().slice(0, 10);
+    RM.rollSize = 45;
+    RM.rates = { Baleno: 5, Swift: 4.5, Dzire: 4 };
+    RM.ready = { Baleno: 2, Swift: 1, Dzire: 0 };
+    RM.designs = {
+        '3D BLACK': { rolls: 10, used: 0, reserved: 0 },
+        '3D GOLD': { rolls: 10, used: 0, reserved: 0 },
+        'CRUSH BLACK': { rolls: 10, used: 0, reserved: 0 }
+    };
+    O = [
+        { id: NID++, p: 'ABC Motors', m: 'Baleno', d: '3D BLACK', u: t, q: 10, c: 0, s: 0, x: 0, matUsed: 0, matReserved: 0 },
+        { id: NID++, p: 'XYZ Motors', m: 'Baleno', d: '3D GOLD', u: t, q: 10, c: 0, s: 0, x: 0, matUsed: 0, matReserved: 0 },
+        { id: NID++, p: 'GHJ Motors', m: 'Baleno', d: 'CRUSH BLACK', u: t, q: 6, c: 0, s: 0, x: 0, matUsed: 0, matReserved: 0 },
+        { id: NID++, p: 'ABC Motors', m: 'Swift', d: '3D BLACK', u: t, q: 10, c: 0, s: 0, x: 0, matUsed: 0, matReserved: 0 }
+    ];
+    D = [];
+    save(); render();
+    alert('Sample loaded.');
+}
+window.sample = sample;
+
+function csv(v) { return '"' + String(v ?? '').replaceAll('"', '""') + '"'; }
+function backup() {
+    try {
+        let z = 'Record Type,Party,Model,Design,Due Date,Qty,Cutting,Stitching,Dispatch,Material Used,Material Reserved,Roll Size,Allocated Rolls,Ready Stock,Model Rate\n';
+        z += ['SETTINGS', '', '', '', '', '', '', '', '', '', '', RM.rollSize, '', '', ''].map(csv).join(',') + '\n';
+        Object.keys(RM.designs).forEach(d => {
+            let x = RM.designs[d];
+            z += ['DESIGN_MATERIAL', '', '', d, '', '', '', '', '', Number(x.used || 0), Number(x.reserved || 0), '', Number(x.rolls || 0), '', ''].map(csv).join(',') + '\n';
+        });
+        Object.keys(RM.ready).forEach(m => {
+            z += ['READY_STOCK', '', m, '', '', '', '', '', '', '', '', '', '', Number(RM.ready[m] || 0), ''].map(csv).join(',') + '\n';
+        });
+        Object.keys(RM.rates).forEach(m => {
+            z += ['MODEL_RATE', '', m, '', '', '', '', '', '', '', '', '', '', '', Number(RM.rates[m] || 0)].map(csv).join(',') + '\n';
+        });
+        O.forEach(o => {
+            z += ['ORDER', o.p, o.m, o.d, o.u, o.q, o.c, o.s, o.x, Number(o.matUsed || 0), Number(o.matReserved || 0), '', '', '', ''].map(csv).join(',') + '\n';
+        });
+        // UTF-8 BOM helps Excel open the file correctly
+        let blob = new Blob(['\uFEFF' + z], { type: 'text/csv;charset=utf-8' });
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'PRODUCTION_BACKUP_' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        alert('Backup downloaded.\n\nOrders: ' + O.length + '\nDesigns: ' + Object.keys(RM.designs).length + '\nRates: ' + Object.keys(RM.rates).length);
+    } catch (err) {
+        console.error(err);
+        alert('Backup failed: ' + (err.message || err));
+    }
+}
+window.backup = backup;
+
+function parse(line) {
+    let a = [], s = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+        let c = line[i];
+        if (c === '"') {
+            if (q && line[i + 1] === '"') { s += '"'; i++; }
+            else q = !q;
+        } else if ((c === ',' || c === ';') && !q) {
+            a.push(s); s = '';
+        } else {
+            s += c;
+        }
+    }
+    a.push(s);
+    return a;
+}
+
+function restoreFromText(text) {
+    // Strip BOM and normalize line endings
+    text = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    let L = text.split('\n').map(x => x.trim()).filter(Boolean);
+    if (!L.length) {
+        alert('Empty CSV file.');
+        return false;
+    }
+
+    let h = parse(L[0]).map(x => String(x || '').toLowerCase().trim().replace(/^"|"$/g, ''));
+    // Accept header even if Excel changed quotes/spaces
+    let headerOk = h[0] === 'record type' || h[0] === 'recordtype' || (h[0] && h[0].includes('record') && h[0].includes('type'));
+    if (!headerOk) {
+        alert('Unsupported CSV format.\n\nFirst cell must be "Record Type".\nFound: "' + (h[0] || '') + '"\n\nPlease use a Backup file from this app.');
+        return false;
+    }
+
+    if (!confirm('Restore will REPLACE all current data with this CSV.\n\nContinue?')) {
+        return false;
+    }
+
+    let newO = [];
+    let newNID = 1;
+    let newD = [];
+    let newRM = { rollSize: 45, ready: {}, rates: {}, designs: {} };
+    let counts = { orders: 0, designs: 0, rates: 0, ready: 0, settings: 0 };
+
+    for (let i = 1; i < L.length; i++) {
+        let v = parse(L[i]).map(x => String(x ?? '').replace(/^"|"$/g, '').trim());
+        let type = String(v[0] || '').trim().toUpperCase().replace(/\s+/g, '_');
+
+        if (type === 'SETTINGS') {
+            let rs = Number(v[11]);
+            if (isFinite(rs) && rs > 0) newRM.rollSize = rs;
+            counts.settings++;
+        }
+        if (type === 'DESIGN_MATERIAL') {
+            let d = String(v[3] || '').trim();
+            if (d) {
+                newRM.designs[d] = {
+                    rolls: Number(v[12]) || 0,
+                    used: Math.max(0, Number(v[9]) || 0),
+                    reserved: Math.max(0, Number(v[10]) || 0)
+                };
+                counts.designs++;
+            }
+        }
+        if (type === 'READY_STOCK') {
+            let m = String(v[2] || '').trim();
+            if (m) {
+                newRM.ready[m] = n(v[13]);
+                counts.ready++;
+            }
+        }
+        if (type === 'MODEL_RATE') {
+            let m = String(v[2] || '').trim();
+            let rate = Number(v[14]);
+            if (m && isFinite(rate) && rate >= 0) {
+                newRM.rates[m] = rate;
+                counts.rates++;
+            }
+        }
+        if (type === 'ORDER') {
+            let qq = n(v[5]);
+            if (!qq) continue;
+            newO.push({
+                id: newNID++,
+                p: v[1] || '',
+                m: v[2] || '',
+                d: v[3] || '',
+                u: v[4] || '',
+                q: qq,
+                c: Math.min(n(v[6]), qq),
+                s: Math.min(n(v[7]), qq),
+                x: Math.min(n(v[8]), qq),
+                matUsed: Math.max(0, Number(v[9]) || 0),
+                matReserved: Math.max(0, Number(v[10]) || 0)
+            });
+            counts.orders++;
+        }
+    }
+
+    // Apply
+    O = newO;
+    D = newD;
+    NID = newNID;
+    RM = newRM;
+
+    save();
+    render();
+    restoreDesignMaterialVisibility();
+    updateSuggestionLists();
+
+    alert(
+        'Restore complete!\n\n' +
+        'Orders: ' + counts.orders + '\n' +
+        'Design materials: ' + counts.designs + '\n' +
+        'Model rates: ' + counts.rates + '\n' +
+        'Ready stock: ' + counts.ready + '\n' +
+        'Roll size: ' + RM.rollSize + ' M²'
+    );
+    return true;
+}
+
+function restore(e) {
+    try {
+        let input = e && e.target ? e.target : $('file');
+        let file = input && input.files ? input.files[0] : null;
+        if (!file) {
+            alert('No file selected.');
+            return;
+        }
+        let r = new FileReader();
+        r.onload = () => {
+            try {
+                restoreFromText(r.result);
+            } catch (err) {
+                console.error(err);
+                alert('Restore failed while reading data:\n' + (err.message || err));
+            }
+        };
+        r.onerror = () => alert('Could not read the file.');
+        r.readAsText(file, 'UTF-8');
+    } catch (err) {
+        console.error(err);
+        alert('Restore failed:\n' + (err.message || err));
+    } finally {
+        // Allow selecting the same file again
+        let input = $('file');
+        if (input) input.value = '';
+    }
+}
+window.restore = restore;
+window.restoreFromText = restoreFromText;
+
+function pickRestoreFile() {
+    let input = $('file');
+    if (input) input.click();
+    else alert('File picker not found.');
+}
+window.pickRestoreFile = pickRestoreFile;
+
+/* =========================================================
+   TODAY / SUMMARY
+========================================================= */
+function dailyOpen() {
+    let z = '';
+    O.forEach(o => {
+        if (!isPending(o)) return;
+        let old = D.find(x => x.id == o.id);
+        let v = old ? old.q : Math.max(1, o.q - o.x);
+        z += `<div class="day">
+            <input type="checkbox" class="dc" data-id="${o.id}" ${old ? 'checked' : ''}>
+            <div>
+                <b>${escS(o.p)}</b><br>
+                ${escS(o.m)} / ${escS(o.d)}
+                <div class="muted">Left: ${Math.max(0, o.q - o.x)} · ${st(o)}</div>
+            </div>
+            <input class="dq" data-id="${o.id}" type="number" min="1" value="${v}" style="width:68px">
+        </div>`;
+    });
+    $('days').innerHTML = z || '<div class="empty-state">No pending orders</div>';
+    $('dayModal').classList.add('show');
+    $('dayModal').style.display = 'flex';
+}
+window.dailyOpen = dailyOpen;
+
+function dayClose() {
+    $('dayModal').classList.remove('show');
+    $('dayModal').style.display = 'none';
+}
+window.dayClose = dayClose;
+
+function daySave() {
+    D = [];
+    document.querySelectorAll('.dc:checked').forEach(c => {
+        let id = Number(c.dataset.id);
+        let input = document.querySelector('.dq[data-id="' + id + '"]');
+        let q = n(input.value);
+        if (q) D.push({ id: id, q: q });
+    });
+    save(); dayClose();
+    alert("Today's list saved.");
+}
+window.daySave = daySave;
+
+function printDay() {
+    if (!D.length) return alert("Select today's work first.");
+    let rows = D.map((w, i) => {
+        let o = O.find(x => x.id == w.id);
+        return `<tr><td>${i + 1}</td><td>${escS(o.p)}</td><td>${escS(o.m)}</td><td>${escS(o.d)}</td><td>${w.q}</td><td>□</td><td>□</td><td>□</td></tr>`;
+    }).join('');
+    let w = window.open('', '_blank');
+    if (!w) return alert('Allow popups.');
+    w.document.write(`<html><head><title>Today Work</title>
+    <style>body{font-family:Arial;padding:20px}h1{text-align:center}
+    table{border-collapse:collapse;width:100%}th,td{border:2px solid #000;padding:11px}
+    th{background:#eee}td:nth-child(n+6){font-size:26px;text-align:center}</style></head><body>
+    <h1>TODAY'S WORK</h1>
+    <p style="text-align:center">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <table><tr><th>No.</th><th>Party</th><th>Model</th><th>Design</th><th>Qty</th><th>CUTTING</th><th>STITCHING</th><th>DISPATCH</th></tr>
+    ${rows}</table>
+    <br>Worker: ________________ &nbsp;&nbsp; Supervisor: ________________
+    <script>window.onload=function(){window.print()}<\/script></body></html>`);
+    w.document.close();
+}
+window.printDay = printDay;
+
+function summaryOpen() {
+    let tq = 0, tc = 0, ts = 0, tx = 0, pend = 0, done = 0;
+    let models = {}, parties = {}, designs = {};
+    O.forEach(o => {
+        tq += o.q; tc += o.c; ts += o.s; tx += o.x;
+        pend += Math.max(0, o.q - o.x);
+        if (o.x >= o.q) done++;
+        let a = models[o.m] || { orders: 0, qty: 0, cut: 0, stitch: 0, dispatch: 0, material: 0, used: 0, reserved: 0 };
+        a.orders++; a.qty += o.q; a.cut += o.c; a.stitch += o.s; a.dispatch += o.x;
+        a.material += Math.max(0, o.q - o.x) * rateFor(o.m);
+        a.used += Number(o.matUsed || 0);
+        a.reserved += Number(o.matReserved || 0);
+        models[o.m] = a;
+        let b = parties[o.p] || { orders: 0, qty: 0 }; b.orders++; b.qty += o.q; parties[o.p] = b;
+        let c = designs[o.d] || { orders: 0, qty: 0 }; c.orders++; c.qty += o.q; designs[o.d] = c;
+    });
+    function top(x) {
+        let a = Object.entries(x).sort((a, b) => b[1].qty - a[1].qty);
+        return a.length ? [a[0][0], a[0][1].qty] : ['-', 0];
+    }
+    let tm = top(models), tp = top(parties), td = top(designs);
+    let today = D.reduce((a, x) => a + n(x.q), 0);
+    let totalRolls = Object.keys(RM.designs).reduce((s, k) => s + Number(RM.designs[k].rolls || 0), 0);
+    let rawTotal = totalRawM2(), rawUsed = totalUsed(), rawReserved = totalReserved(), rawFree = totalFree();
+    let rollSize = Number(RM.rollSize || 45);
+
+    let mr = Object.entries(models).sort((a, b) => b[1].qty - a[1].qty).map(([k, v]) => `
+        <tr><td>${escS(k)}</td><td>${v.orders}</td><td>${v.qty}</td>
+        <td>${v.cut}</td><td>${v.stitch}</td><td>${v.dispatch}</td>
+        <td>${Math.max(0, v.qty - v.dispatch)}</td>
+        <td>${v.material.toFixed(2)}</td><td>${v.used.toFixed(2)}</td><td>${v.reserved.toFixed(2)}</td></tr>`).join('');
+
+    let pr = Object.entries(parties).sort((a, b) => b[1].qty - a[1].qty).map(([k, v]) =>
+        `<tr><td>${escS(k)}</td><td>${v.orders}</td><td>${v.qty}</td></tr>`).join('');
+    let dr = Object.entries(designs).sort((a, b) => b[1].qty - a[1].qty).map(([k, v]) =>
+        `<tr><td>${escS(k)}</td><td>${v.orders}</td><td>${v.qty}</td></tr>`).join('');
+
+    let rawDesignRows = Object.keys(RM.designs).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(k => {
+        let x = RM.designs[k];
+        let rolls = Number(x.rolls || 0), totalM2 = rolls * rollSize;
+        let used = Number(x.used || 0), reserved = Number(x.reserved || 0);
+        let free = totalM2 - used - reserved;
+        let cls = free < 0 ? 'rmBad' : free < 10 ? 'rmWarn' : 'rmGood';
+        return `<tr><td><b>${escS(k)}</b></td><td>${rolls.toFixed(2)}</td><td>${rollSize.toFixed(2)}</td>
+            <td><b>${totalM2.toFixed(2)}</b></td><td>${used.toFixed(2)}</td><td>${reserved.toFixed(2)}</td>
+            <td><b class="${cls}">${free.toFixed(2)}</b></td></tr>`;
+    }).join('');
+
+    $('summaryContent').innerHTML = `
+    <div class="stats">
+        <div class="stat"><b>Top Car</b><div class="num">${escS(tm[0])}</div>${tm[1]} qty</div>
+        <div class="stat"><b>Top Party</b><div class="num">${escS(tp[0])}</div>${tp[1]} qty</div>
+        <div class="stat"><b>Top Design</b><div class="num">${escS(td[0])}</div>${td[1]} qty</div>
+        <div class="stat"><b>Orders</b><div class="num">${O.length}</div></div>
+        <div class="stat"><b>Total Qty</b><div class="num">${tq}</div></div>
+        <div class="stat"><b>Pending</b><div class="num">${pend}</div></div>
+        <div class="stat"><b>Completed</b><div class="num">${done}</div></div>
+    </div>
+    <br>
+    <div class="stats">
+        <div class="stat"><b>Cutting</b><div class="num">${tc}</div></div>
+        <div class="stat"><b>Stitching</b><div class="num">${ts}</div></div>
+        <div class="stat"><b>Dispatch</b><div class="num">${tx}</div></div>
+        <div class="stat"><b>Today</b><div class="num">${today}</div></div>
+    </div>
+    <div class="summarySection">
+        <h3>Raw Material</h3>
+        <div class="summaryRawGrid">
+            <div class="summaryRawCard"><b>Rolls</b><div class="num">${totalRolls.toFixed(2)}</div></div>
+            <div class="summaryRawCard"><b>M² / Roll</b><div class="num">${rollSize.toFixed(2)}</div></div>
+            <div class="summaryRawCard"><b>Total</b><div class="num">${rawTotal.toFixed(2)}</div></div>
+            <div class="summaryRawCard"><b>Used</b><div class="num">${rawUsed.toFixed(2)}</div></div>
+            <div class="summaryRawCard"><b>Reserved</b><div class="num">${rawReserved.toFixed(2)}</div></div>
+            <div class="summaryRawCard"><b>Free</b><div class="num ${rawFree < 0 ? 'rmBad' : rawFree < 10 ? 'rmWarn' : 'rmGood'}">${rawFree.toFixed(2)}</div></div>
+        </div>
+        <br>
+        <h3>By Design</h3>
+        <div class="table"><table>
+            <thead><tr><th>Design</th><th>Rolls</th><th>M²/Roll</th><th>Total</th><th>Used</th><th>Reserved</th><th>Free</th></tr></thead>
+            <tbody>${rawDesignRows || '<tr><td colspan="7" style="text-align:center">None</td></tr>'}</tbody>
+        </table></div>
+    </div>
+    <h3>By Model</h3>
+    <div class="table"><table>
+        <tr><th>Model</th><th>Orders</th><th>Qty</th><th>Cut</th><th>Stitch</th><th>Disp</th><th>Rem</th><th>Req</th><th>Used</th><th>Res</th></tr>
+        ${mr}
+    </table></div>
+    <h3>By Party</h3>
+    <div class="table"><table><tr><th>Party</th><th>Orders</th><th>Qty</th></tr>${pr}</table></div>
+    <h3>By Design</h3>
+    <div class="table"><table><tr><th>Design</th><th>Orders</th><th>Qty</th></tr>${dr}</table></div>
+    `;
+    $('summaryModal').classList.add('show');
+    $('summaryModal').style.display = 'flex';
+}
+window.summaryOpen = summaryOpen;
+
+function summaryClose() {
+    $('summaryModal').classList.remove('show');
+    $('summaryModal').style.display = 'none';
+}
+window.summaryClose = summaryClose;
+
+function printSummary() {
+    let w = window.open('', '_blank');
+    if (!w) return alert('Allow popups.');
+    w.document.write(`<html><head><title>Summary</title>
+    <style>body{font-family:Arial;padding:18px}h1{text-align:center}
+    table{border-collapse:collapse;width:100%;margin-bottom:14px}
+    th,td{border:1px solid #000;padding:7px}th{background:#eee}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .stat{border:1px solid #000;padding:9px}.num{font-size:17px;font-weight:bold}
+    .summaryRawGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .summaryRawCard{border:1px solid #000;padding:9px}
+    .rmGood{color:#059669}.rmWarn{color:#d97706}.rmBad{color:#dc2626}
+    </style></head><body>
+    <h1>PRODUCTION SUMMARY</h1>
+    <p style="text-align:center">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    ${$('summaryContent').innerHTML}
+    <script>window.onload=function(){window.print()}<\/script></body></html>`);
+    w.document.close();
+}
+window.printSummary = printSummary;
+
+/* =========================================================
+   START
+========================================================= */
+loadLocal();          // instant from cache
+render();
+restoreDesignMaterialVisibility();
+updateSuggestionLists();
+
+// Ensure file input always wired (module-safe)
+const fileInput = document.getElementById('file');
+if (fileInput) {
+    fileInput.addEventListener('change', restore);
+}
+
+// Firebase listener will update when cloud data arrives
+</script>
+</body>
+</html>
